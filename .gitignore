@@ -1,0 +1,23 @@
+# Project
+.env
+*.log
+.DS_Store
+
+# Backend
+backend/venv/
+backend/__pycache__/
+backend/*.pyc
+backend/elitehire.db
+backend/.env
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+
+# VS Code
+.vscode/
+
+# OS files
+Thumbs.db
+Desktop.ini

@@ -289,8 +289,8 @@ export default function InterviewPage({ resumeData }) {
     await saveReplay(finalReport, history)
   }
 
-  const sendAnswer = async () => {
-    const answer = input.trim()
+  const sendAnswer = async (overrideAnswer = null) => {
+    const answer = (overrideAnswer ?? input).trim()
     if (!answer || loading) return
     addMessage("user", answer)
     setInput("")
@@ -323,6 +323,14 @@ export default function InterviewPage({ resumeData }) {
       setQNum((current) => current + 1)
     }
   }
+
+  useEffect(() => {
+    if (!started || done || loading) return
+    if (speech.listening) return
+    const transcriptAnswer = speech.transcript?.trim()
+    if (!transcriptAnswer) return
+    sendAnswer(transcriptAnswer)
+  }, [speech.listening, speech.transcript, started, done, loading])
 
   const saveReport = async () => {
     if (!report || !resumeData) return
@@ -439,7 +447,13 @@ export default function InterviewPage({ resumeData }) {
 
         {started && !done && (
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            <input className="input" value={input} placeholder={speech.listening ? "Listening..." : "Type your answer or use mic..."} onChange={(event) => setInput(event.target.value)} onKeyDown={(event) => event.key === "Enter" && sendAnswer()} style={{ flex: 1, border: speech.listening ? "1px solid rgba(252,129,129,0.4)" : undefined }} />
+            <input
+              className="input"
+              value={input}
+              placeholder={speech.listening ? "Listening..." : "Voice-only mode: click Use Mic to answer"}
+              readOnly
+              style={{ flex: 1, border: speech.listening ? "1px solid rgba(252,129,129,0.4)" : undefined }}
+            />
             {speech.supported && <button className="btn btn-icon" onClick={speech.listening ? speech.stopListen : speech.startListen} style={{ width: 94, background: speech.listening ? "rgba(196,87,77,0.12)" : undefined, border: speech.listening ? "1px solid rgba(196,87,77,0.28)" : undefined, animation: speech.listening ? "pulse 1.5s infinite" : "none" }}>{speech.listening ? "Stop Mic" : "Use Mic"}</button>}
             <button className="btn btn-primary" onClick={sendAnswer} disabled={!input.trim() || loading} style={{ padding: "0 18px", height: 42 }}>Send</button>
           </div>
