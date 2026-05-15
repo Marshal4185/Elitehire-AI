@@ -1,9 +1,0 @@
-__pycache__
-*.pyc
-*.pyo
-*.pyd
-venv/
-elitehire.db
-*.sqlite3
-.env
-*.log
