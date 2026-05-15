@@ -190,7 +190,7 @@ export default function InterviewPage({ resumeData }) {
   const saveReplay = async (finalReport, history) => {
     try {
       setSavingReplay(true)
-      const response = await fetch("http://localhost:8000/api/interview/replay/save", {
+      const response = await fetch(apiUrl("/api/interview/replay/save"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -218,7 +218,7 @@ export default function InterviewPage({ resumeData }) {
       const frame = webcam.capture()
       if (!frame) return
       try {
-        const emotionResponse = await fetch("http://localhost:8000/api/emotion/detect", {
+        const emotionResponse = await fetch(apiUrl("/api/emotion/detect"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ image_base64: frame }),
@@ -229,7 +229,7 @@ export default function InterviewPage({ resumeData }) {
           setEmotionLog((current) => [...current, emotionData.dominant])
         }
         if (!faceVerified) {
-          const faceResponse = await fetch("http://localhost:8000/api/face/verify", {
+          const faceResponse = await fetch(apiUrl("/api/face/verify"), {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ image_base64: frame }),
@@ -249,7 +249,7 @@ export default function InterviewPage({ resumeData }) {
     await webcam.start()
     setStarted(true)
     try {
-      const response = await fetch("http://localhost:8000/api/interview/start", {
+      const response = await fetch(apiUrl("/api/interview/start"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ candidate_name: resumeData?.name || "Candidate", job_role: resumeData?.predicted_role || "ML Engineer", skills: resumeData?.skills || ["Python"], experience_years: resumeData?.experience_years || 1 }),
@@ -276,7 +276,7 @@ export default function InterviewPage({ resumeData }) {
     addMessage("ai", "Thank you for completing the interview! Generating your report...")
     let finalReport = null
     try {
-      const response = await fetch("http://localhost:8000/api/interview/finalize", {
+      const response = await fetch(apiUrl("/api/interview/finalize"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ history, emotion_log: emotionLog }),
@@ -298,7 +298,7 @@ export default function InterviewPage({ resumeData }) {
     setLoading(true)
     const history = messages.map((message) => ({ role: message.role, text: message.text }))
     try {
-      const response = await fetch("http://localhost:8000/api/interview/answer", {
+      const response = await fetch(apiUrl("/api/interview/answer"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ question: messages[messages.length - 1]?.text || "", answer, job_role: resumeData?.predicted_role || "ML Engineer", skills: resumeData?.skills || [], history, question_number: qNum }),
@@ -336,7 +336,7 @@ export default function InterviewPage({ resumeData }) {
     if (!report || !resumeData) return
     setSaving(true)
     try {
-      await fetch("http://localhost:8000/api/candidates/save", {
+      await fetch(apiUrl("/api/candidates/save"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: resumeData.name || "Candidate", email: resumeData.email || "", role: resumeData.predicted_role || "ML Engineer", score: resumeData.score || 0, skills: resumeData.skills || [], interview_score: report.overall_score, emotion_summary: report.emotion_summary || "", status: report.recommendation || "Pending" }),

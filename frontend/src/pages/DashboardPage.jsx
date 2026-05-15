@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react"
+import { apiUrl } from "../api"
 
 function AnimCount({ to, suffix = "" }) {
   const [value, setValue] = useState(0)
@@ -75,14 +76,14 @@ export default function DashboardPage() {
   const [candidates, setCandidates] = useState([])
 
   useEffect(() => {
-    fetch("http://localhost:8000/api/dashboard/stats")
+    fetch(apiUrl("/api/dashboard/stats"))
       .then((response) => response.json())
       .then(setStats)
       .catch(() =>
         setStats({ total_candidates: 248, selected: 34, avg_score: 81, interviews_today: 12 }),
       )
 
-    fetch("http://localhost:8000/api/candidates")
+    fetch(apiUrl("/api/candidates"))
       .then((response) => response.json())
       .then((data) => setCandidates(data.length ? data : MOCK_CANDIDATES))
       .catch(() => setCandidates(MOCK_CANDIDATES))

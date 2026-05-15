@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react"
+import { apiUrl } from "./api"
 import Sidebar from "./components/Sidebar"
 import DashboardPage from "./pages/DashboardPage"
 import CandidatesPage from "./pages/CandidatesPage"
@@ -17,7 +18,7 @@ export default function App() {
   const [apiOnline, setApiOnline] = useState(null)
 
   useEffect(() => {
-    fetch("http://localhost:8000/api/health")
+    fetch(apiUrl("/api/health"))
       .then((response) => response.json())
       .then((data) => setApiOnline(data.status === "online"))
       .catch(() => setApiOnline(false))

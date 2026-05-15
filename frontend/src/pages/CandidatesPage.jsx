@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react"
+import { apiUrl } from "../api"
 
 const MOCK = [
   { id: 1, name: "Arjun Sharma", email: "arjun@email.com", role: "ML Engineer", score: 87, interview_score: 82, status: "Shortlisted", skills: "Python, TensorFlow, OpenCV", emotion_summary: "confident" },
@@ -19,7 +20,7 @@ export default function CandidatesPage() {
   const [search, setSearch] = useState("")
 
   useEffect(() => {
-    fetch("http://localhost:8000/api/candidates")
+    fetch(apiUrl("/api/candidates"))
       .then((response) => response.json())
       .then((data) => setCandidates(data.length ? data : MOCK))
       .catch(() => setCandidates(MOCK))
@@ -27,7 +28,7 @@ export default function CandidatesPage() {
 
   const updateStatus = async (id, status) => {
     try {
-      await fetch(`http://localhost:8000/api/candidates/${id}/status?status=${status}`, { method: "PATCH" })
+      await fetch(apiUrl(`/api/candidates/${id}/status?status=${status}`), { method: "PATCH" })
     } catch {}
     setCandidates((current) => current.map((candidate) => (candidate.id === id ? { ...candidate, status } : candidate)))
   }
