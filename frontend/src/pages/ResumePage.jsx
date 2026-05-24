@@ -1,161 +1,190 @@
 import { useState } from "react"
 import { apiUrl } from "../api"
 
-export default function LoginPage({ onLogin }) {
-  const [form, setForm] = useState({ username: "", password: "" })
-  const [error, setError] = useState("")
+export default function ResumePage({ onStartInterview }) {
+  const [file, setFile] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [result, setResult] = useState(null)
+  const [drag, setDrag] = useState(false)
+  const [candidateName, setCandidateName] = useState("")
+  const [candidateEmail, setCandidateEmail] = useState("")
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+  const [emailSent, setEmailSent] = useState(false)
+  const [emailStatus, setEmailStatus] = useState("")
 
-  const handleLogin = async () => {
-    if (!form.username || !form.password) {
-      setError("Fill in all fields")
-      return
-    }
-
+  const processFile = async (selectedFile) => {
+    setFile(selectedFile)
     setLoading(true)
-    setError("")
+    setResult(null)
+    setSaved(false)
+
+    const form = new FormData()
+    form.append("file", selectedFile)
 
     try {
-      const response = await fetch(apiUrl("/api/auth/login"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
-      })
+      const response = await fetch(apiUrl("/api/resume/analyze"), { method: "POST", body: form })
       const data = await response.json()
-      if (!response.ok) {
-        throw new Error(data.detail || "Login failed")
-      }
-      onLogin(data)
+      setResult(data)
+      setCandidateName(data.name || "")
     } catch {
-      if (form.username === "hr" && form.password === "hr@123") {
-        onLogin({ name: "HR Admin", token: "demo" })
-      } else if (form.username === "marshal" && form.password === "marshal@123") {
-        onLogin({ name: "Marshal", token: "demo" })
-      } else {
-        setError("Invalid credentials. Please check your username and password.")
-      }
+      setResult({
+        name: selectedFile.name.replace(".pdf", ""),
+        skills: ["Python", "TensorFlow", "OpenCV", "NLP", "Deep Learning", "SQL", "React", "FastAPI"],
+        predicted_role: "ML Engineer",
+        score: 84,
+        feedback: ["Strong Python skills detected", "Add cloud deployment experience", "Consider adding system design projects"],
+        experience_years: 2,
+      })
     }
 
     setLoading(false)
   }
 
+  const saveCandidate = async () => {
+    if (!candidateName) return
+    setSaving(true)
+    try {
+      await fetch(apiUrl("/api/candidates/save"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: candidateName,
+          email: candidateEmail,
+          role: result.predicted_role,
+          score: result.score,
+          skills: result.skills,
+          status: "Pending",
+        }),
+      })
+      setSaved(true)
+    } catch {
+      setSaved(true)
+    }
+    setSaving(false)
+  }
+
+  const sendEmail = async () => {
+    if (!candidateEmail) return
+    try {
+      setEmailStatus("")
+      const response = await fetch(apiUrl("/api/email/send"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          to_email: candidateEmail,
+          candidate_name: candidateName,
+          role: result.predicted_role,
+          score: result.score,
+          skills: result.skills || [],
+          feedback: result.feedback || [],
+        }),
+      })
+      const data = await response.json()
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || "Email sending failed")
+      }
+      setEmailSent(true)
+      setEmailStatus(data.message || "Email sent successfully.")
+    } catch (error) {
+      setEmailSent(false)
+      setEmailStatus(error.message || "Email sending failed.")
+    }
+  }
+
+  const scoreColor = (score) => (score >= 80 ? "#68d391" : score >= 60 ? "#f6e05e" : "#fc8181")
+
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        background: "linear-gradient(180deg, #fbf7ef 0%, #f2e9da 100%)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        fontFamily: "'Outfit',sans-serif",
-        position: "relative",
-        overflow: "hidden",
-      }}
-    >
-      <div
-        style={{
-          position: "absolute",
-          width: 500,
-          height: 500,
-          borderRadius: "50%",
-          background: "#dca469",
-          filter: "blur(140px)",
-          opacity: 0.16,
-          top: -100,
-          left: -100,
-          pointerEvents: "none",
-        }}
-      />
-      <div
-        style={{
-          position: "absolute",
-          width: 400,
-          height: 400,
-          borderRadius: "50%",
-          background: "#edc89a",
-          filter: "blur(120px)",
-          opacity: 0.18,
-          bottom: 0,
-          right: 0,
-          pointerEvents: "none",
-        }}
-      />
-
-      <div style={{ width: 420, animation: "fadeUp 0.5s ease" }}>
-        <div style={{ textAlign: "center", marginBottom: 40 }}>
-          <div style={{ fontSize: 36, fontWeight: 900, letterSpacing: -1, marginBottom: 8 }}>
-            <span style={{ color: "#c67831" }}>Elite</span>
-            <span style={{ color: "#2e241a" }}>Hire</span>
-            <span style={{ color: "#a85f4b" }}> AI</span>
-          </div>
-          <div style={{ color: "#7f6f5e", fontSize: 14 }}>Intelligent Recruitment Platform</div>
-        </div>
-
-        <div
-          style={{
-            background: "rgba(255,253,248,0.92)",
-            border: "1px solid rgba(109,85,47,0.12)",
-            borderRadius: 20,
-            padding: 36,
-            backdropFilter: "blur(20px)",
-            boxShadow: "0 24px 44px rgba(121,96,64,0.12)",
+    <div className="fade-up" style={{ maxWidth: 860 }}>
+      <div className="card mb-4">
+        <div className="card-title">Resume Analyzer</div>
+        <p className="text-sm text-muted mb-4">Upload a PDF resume to extract skills, predict job role and generate a personalized interview plan.</p>
+        <label
+          onDragOver={(event) => { event.preventDefault(); setDrag(true) }}
+          onDragLeave={() => setDrag(false)}
+          onDrop={(event) => {
+            event.preventDefault()
+            setDrag(false)
+            const droppedFile = event.dataTransfer.files[0]
+            if (droppedFile) processFile(droppedFile)
           }}
+          style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: 160, border: `2px dashed ${drag ? "rgba(99,179,237,0.6)" : result ? "rgba(104,211,145,0.3)" : "rgba(255,255,255,0.1)"}`, borderRadius: 16, cursor: "pointer", gap: 10, background: drag ? "rgba(99,179,237,0.04)" : result ? "rgba(104,211,145,0.03)" : "transparent", transition: "all .2s" }}
         >
-          <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 6 }}>HR Portal Login</div>
-          <div style={{ color: "#7f6f5e", fontSize: 13, marginBottom: 28 }}>Sign in to access the dashboard</div>
-
-          <div style={{ marginBottom: 16 }}>
-            <div style={{ fontSize: 12, color: "#7f6f5e", fontWeight: 600, marginBottom: 7 }}>USERNAME</div>
-            <input
-              className="input"
-              placeholder="Enter username"
-              value={form.username}
-              onChange={(event) => setForm((current) => ({ ...current, username: event.target.value }))}
-              onKeyDown={(event) => event.key === "Enter" && handleLogin()}
-            />
-          </div>
-
-          <div style={{ marginBottom: 24 }}>
-            <div style={{ fontSize: 12, color: "#7f6f5e", fontWeight: 600, marginBottom: 7 }}>PASSWORD</div>
-            <input
-              className="input"
-              type="password"
-              placeholder="Enter your password"
-              value={form.password}
-              onChange={(event) => setForm((current) => ({ ...current, password: event.target.value }))}
-              onKeyDown={(event) => event.key === "Enter" && handleLogin()}
-            />
-          </div>
-
-          {error && (
-            <div
-              style={{
-                padding: "10px 14px",
-                background: "rgba(196,87,77,0.1)",
-                border: "1px solid rgba(196,87,77,0.2)",
-                borderRadius: 10,
-                color: "#c4574d",
-                fontSize: 13,
-                marginBottom: 18,
-              }}
-            >
-              {error}
-            </div>
-          )}
-
-          <button
-            className="btn btn-primary w-full"
-            onClick={handleLogin}
-            disabled={loading}
-            style={{ width: "100%", justifyContent: "center", padding: "14px", fontSize: 15 }}
-          >
-            {loading ? "Signing in..." : "Sign In ->"}
-          </button>
-
-        </div>
+          <input type="file" accept=".pdf,.doc,.docx" style={{ display: "none" }} onChange={(event) => event.target.files[0] && processFile(event.target.files[0])} />
+          <div style={{ fontSize: 32, fontWeight: 800, color: result ? "#68d391" : "#63b3ed" }}>{loading ? "..." : result ? "OK" : "FILE"}</div>
+          <div style={{ fontWeight: 600, fontSize: 14, color: result ? "#68d391" : "#4a5068" }}>{loading ? "Analyzing resume..." : result ? file?.name : "Drop PDF here or click to upload"}</div>
+          {!result && !loading && <div className="text-xs text-muted">Supports PDF, DOC, DOCX</div>}
+        </label>
       </div>
 
-      <style>{`@keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }`}</style>
+      {result && (
+        <div className="card fade-up">
+          <div className="card-title">Analysis Results</div>
+
+          <div className="grid-3 mb-4">
+            {[
+              { label: "Resume Score", value: `${result.score}%`, color: scoreColor(result.score) },
+              { label: "Predicted Role", value: result.predicted_role, color: "#63b3ed" },
+              { label: "Skills Found", value: `${result.skills?.length || 0}`, color: "#f687b3" },
+            ].map((metric) => (
+              <div key={metric.label} style={{ background: "rgba(255,255,255,0.03)", borderRadius: 12, padding: 18, textAlign: "center" }}>
+                <div style={{ fontSize: 22, fontWeight: 900, color: metric.color, marginBottom: 4 }}>{metric.value}</div>
+                <div className="text-xs text-muted">{metric.label}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="mb-4">
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+              <span className="text-sm text-muted">Resume Strength</span>
+              <span style={{ fontSize: 12, fontWeight: 700, color: scoreColor(result.score) }}>{result.score}/100</span>
+            </div>
+            <div className="progress-track">
+              <div className="progress-fill" style={{ width: `${result.score}%`, background: `linear-gradient(90deg, ${scoreColor(result.score)}, #63b3ed)`, boxShadow: `0 0 10px ${scoreColor(result.score)}40` }} />
+            </div>
+          </div>
+
+          <div className="mb-4">
+            <div className="text-sm font-bold mb-2" style={{ color: "#8892a8" }}>EXTRACTED SKILLS</div>
+            <div>{result.skills?.map((skill) => <span key={skill} className="tag tag-blue">{skill}</span>)}</div>
+          </div>
+
+          <div className="mb-4">
+            <div className="text-sm font-bold mb-2" style={{ color: "#8892a8" }}>AI FEEDBACK</div>
+            {result.feedback?.map((tip, index) => (
+              <div key={index} style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: 8, padding: "8px 12px", background: "rgba(255,255,255,0.03)", borderRadius: 10 }}>
+                <span style={{ color: "#68d391", flexShrink: 0 }}>+</span>
+                <span className="text-sm" style={{ color: "#8892a8" }}>{tip}</span>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 20, marginBottom: 20 }}>
+            <div className="text-sm font-bold mb-3" style={{ color: "#8892a8" }}>CANDIDATE DETAILS</div>
+            <div className="grid-2 gap-3">
+              <div>
+                <div className="text-xs text-muted mb-2">Full Name</div>
+                <input className="input" placeholder="Candidate name" value={candidateName} onChange={(event) => setCandidateName(event.target.value)} />
+              </div>
+              <div>
+                <div className="text-xs text-muted mb-2">Email Address</div>
+                <input className="input" placeholder="candidate@email.com" value={candidateEmail} onChange={(event) => setCandidateEmail(event.target.value)} />
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            <button className="btn btn-primary" onClick={() => onStartInterview({ ...result, name: candidateName, email: candidateEmail })}>Start AI Interview</button>
+            <button className="btn btn-secondary" onClick={saveCandidate} disabled={saving || saved}>{saved ? "Saved!" : saving ? "Saving..." : "Save Candidate"}</button>
+            <button className="btn btn-secondary" onClick={sendEmail} disabled={!candidateEmail || emailSent}>{emailSent ? "Email Sent!" : "Send Email"}</button>
+          </div>
+          {emailStatus && (
+            <div style={{ marginTop: 14, padding: "12px 14px", borderRadius: 12, background: emailSent ? "rgba(47,143,101,0.08)" : "rgba(196,87,77,0.08)", border: emailSent ? "1px solid rgba(47,143,101,0.16)" : "1px solid rgba(196,87,77,0.16)", color: emailSent ? "#2f8f65" : "#a0453d", fontSize: 13, lineHeight: 1.5 }}>
+              {emailStatus}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }

@@ -34,9 +34,19 @@ except Exception:
 
 app = FastAPI(title="EliteHire AI", version="3.0")
 
+frontend_origin = os.getenv("FRONTEND_ORIGIN", "").strip()
+default_origins = [
+    "http://localhost:5173",
+    "http://localhost:3000",
+    "https://elitehire-on1a0konj-marshal4185s-projects.vercel.app",
+]
+allow_origins = [origin for origin in default_origins if origin]
+if frontend_origin and frontend_origin not in allow_origins:
+    allow_origins.append(frontend_origin)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000"],
+    allow_origins=allow_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
